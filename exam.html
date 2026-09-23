@@ -1,568 +1,1870 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" id="html-root">
+<html lang="en" dir="ltr">
+
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="page-title">امتحان المادة الدراسية</title>
+
+    <title>Smart English Assessment</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .english-bg {
+
+            background:
+                linear-gradient(
+                    rgba(8, 15, 35, 0.88),
+                    rgba(32, 12, 60, 0.92)
+                ),
+                url("https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=2000&q=85");
+
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        .glass {
+
+            background: rgba(255,255,255,0.08);
+
+            backdrop-filter: blur(18px);
+
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        textarea,
+        input {
+            outline: none;
+        }
+
+    </style>
+
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900 min-h-screen p-4 flex flex-col items-center">
-    <div class="max-w-2xl w-full bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl shadow-2xl text-white relative">
-        <div class="absolute top-4 left-4">
-            <button onclick="toggleLanguage()" id="lang-btn" class="bg-purple-600/50 hover:bg-purple-600 text-xs px-3 py-1.5 rounded-lg border border-white/20 transition font-bold">English</button>
-        </div>
-        <div class="flex justify-between items-center border-b border-white/20 pb-4 mb-6 mt-4">
+
+
+<body class="english-bg min-h-screen p-4 flex flex-col items-center text-white">
+
+
+<div class="max-w-4xl w-full">
+
+
+    <!-- HEADER -->
+
+    <div class="glass border border-white/20 rounded-3xl p-6 shadow-2xl mb-5">
+
+        <div class="flex flex-col md:flex-row justify-between gap-5 items-center">
+
             <div>
-                <h1 id="exam-heading" class="text-xl font-bold text-purple-300">امتحان المادة الدراسية</h1>
-                <p id="student-info" class="text-sm text-gray-300 mt-1"></p>
+
+                <div class="flex items-center gap-3 mb-2">
+
+                    <div
+                        class="w-12 h-12 rounded-xl bg-purple-600 flex items-center justify-center font-black text-xl">
+                        A+
+                    </div>
+
+                    <div>
+
+                        <h1
+                            id="exam-heading"
+                            class="text-2xl font-black">
+                            Smart English Assessment
+                        </h1>
+
+                        <p
+                            id="student-info"
+                            class="text-sm text-gray-300 mt-1">
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div class="flex gap-2 text-xs mt-3">
+
+                    <span class="bg-purple-500/20 border border-purple-400/30 px-3 py-1 rounded-full">
+                        IGCSE
+                    </span>
+
+                    <span class="bg-blue-500/20 border border-blue-400/30 px-3 py-1 rounded-full">
+                        English
+                    </span>
+
+                    <span class="bg-green-500/20 border border-green-400/30 px-3 py-1 rounded-full">
+                        AI Grading
+                    </span>
+
+                </div>
+
             </div>
-            <div id="timer-box" class="bg-red-600/30 border border-red-500 px-4 py-2 rounded-xl text-center">
-                <span id="timer-label" class="text-xs text-red-300 block">الوقت المتبقي</span>
-                <span id="time-left" class="font-bold text-lg">10:00</span>
+
+
+            <div
+                id="timer-box"
+                class="bg-red-600/20 border border-red-500/50 px-6 py-3 rounded-2xl text-center min-w-[130px]">
+
+                <span
+                    class="text-xs text-red-300 block">
+                    Time Remaining
+                </span>
+
+                <span
+                    id="time-left"
+                    class="font-black text-2xl">
+                    10:00
+                </span>
+
             </div>
+
         </div>
-        <div id="exam-container">
-            <div class="text-center py-10 text-gray-300">جاري تحميل بيانات الامتحان من السيرفر...</div>
-        </div>
+
     </div>
-    <script type="module">
-        import { db, doc, setDoc, getDoc } from "./firebase.js";
-function addAIFile(content,data,label){
-    if(!data)return;
-    if(data.startsWith("data:application/pdf")){
-        content.push({type:"input_file",file_data:data,filename:(label||"file")+".pdf"});
-    }else if(data.startsWith("data:image/")){
-        content.push({type:"input_image",image_url:data,detail:"high"});
+
+
+    <!-- EXAM CONTAINER -->
+
+    <div
+        id="exam-container"
+        class="glass border border-white/20 rounded-3xl p-6 shadow-2xl">
+
+        <div class="text-center py-10 text-gray-300">
+            Loading exam...
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<script type="module">
+
+import {
+    db,
+    doc,
+    setDoc,
+    getDoc
+} from "./firebase.js";
+
+
+/* =========================================================
+   GLOBAL VARIABLES
+========================================================= */
+
+let examSettings = {
+    duration: 10,
+    status: "Open"
+};
+
+let questions = [];
+
+let submissions = {};
+
+let studentID =
+    localStorage.getItem("currentStudentID");
+
+let studentName =
+    localStorage.getItem("currentStudentName");
+
+let timerInterval = null;
+
+let examSubmissionStarted = false;
+
+
+/* =========================================================
+   LOGIN CHECK
+========================================================= */
+
+if (!studentID) {
+
+    window.location.href = "index.html";
+
+}
+
+
+/* =========================================================
+   AI HELPERS
+========================================================= */
+
+function addAIFile(content, data, label) {
+
+    if (!data) return;
+
+    if (data.startsWith("data:application/pdf")) {
+
+        content.push({
+
+            type: "input_file",
+
+            file_data: data,
+
+            filename:
+                (label || "file") + ".pdf"
+        });
+
+    } else if (data.startsWith("data:image/")) {
+
+        content.push({
+
+            type: "input_image",
+
+            image_url: data,
+
+            detail: "high"
+        });
     }
 }
-function getAIText(data){
-    if(data.output_text)return data.output_text;
-    for(const item of data.output||[]){
-        for(const part of item.content||[]){
-            if(part.type==="output_text"&&part.text)return part.text;
+
+
+function getAIText(data) {
+
+    if (data.output_text) {
+
+        return data.output_text;
+    }
+
+
+    for (const item of data.output || []) {
+
+        for (const part of item.content || []) {
+
+            if (
+                part.type === "output_text" &&
+                part.text
+            ) {
+
+                return part.text;
+            }
         }
     }
+
     return "";
 }
-async function callAI(content,apiKey){
-    const response=await fetch("https://api.openai.com/v1/responses",{
-        method:"POST",
-        headers:{"Content-Type":"application/json","Authorization":"Bearer "+apiKey},
-        body:JSON.stringify({model:"gpt-4o",input:[{role:"user",content}],text:{format:{type:"json_schema",name:"exam_grading",strict:true,schema:{type:"object",properties:{studentTranscription:{type:"string"},awardedPoints:{type:"number"},feedback:{type:"string"}},required:["studentTranscription","awardedPoints","feedback"],additionalProperties:false}}},max_output_tokens:1200,store:false})
-    });
-    const data=await response.json();
-    if(!response.ok)throw new Error(data?.error?.message||("OpenAI HTTP "+response.status));
-    if(data?.incomplete_details)throw new Error("OpenAI response was incomplete");
-    if(data?.output?.some(x=>x.type==="message"&&x.content?.some(y=>y.type==="refusal")))throw new Error("OpenAI refused to analyze the image");
-    const text=getAIText(data).trim();
-    if(!text)throw new Error("OpenAI returned no text output");
-    return text.replace(/```json/gi,"").replace(/```/g,"").trim();
-}
-        let currentLang = localStorage.getItem('siteLang') || 'ar';
-        let examSettings = { duration: 10, status: 'متاح للطلاب' };
-        let questions = [];
-        let submissions = {};
-        const translations = {
-            ar: {
-                title: "امتحان المادة الدراسية",
-                heading: "امتحان المادة الدراسية",
-                timerLabel: "الوقت المتبقي",
-                welcome: "مرحباً بك، ",
-                noQuestions: "لا توجد أسئلة مضافة في الامتحان حالياً.",
-                notAvailable: "الامتحان غير متاح حالياً، يرجى الانتظار لحين فتحه من قبل أستاذ المادة.",
-                submitBtn: "تسليم الإجابات وإنهاء الامتحان",
-                successAlert: "تم تسليم الامتحان وتصحيحه بنجاح!",
-                gradedTitle: "تم تصحيح امتحانك ورصد درجتك أوتوماتيكياً بواسطة الـ AI",
-                finalScoreText: "الدرجة النهـائية: ",
-                fromText: " من ",
-                detailedFeedbackTitle: "التصحيح المفصل والتعليقات:",
-                pendingTitle: "جاري التصحيح التلقائي...",
-                pendingStatus: "يتم فحص إجاباتك الآن بواسطة الـ AI",
-                pendingSub: "يرجى الانتظار لحظات حتى تظهر النتيجة.",
-                uploadImgLabel: "رفع صورة أو ملف PDF للإجابة المكتوبة بخط اليد:",
-                essayPlaceholder: "اكتب إجابتك النصية هنا..."
-            },
-            en: {
-                title: "Course Exam",
-                heading: "Course Examination",
-                timerLabel: "Time Remaining",
-                welcome: "Welcome, ",
-                noQuestions: "No questions available for this exam currently.",
-                notAvailable: "The exam is currently closed. Please wait for the instructor to open it.",
-                submitBtn: "Submit Answers & Finish Exam",
-                successAlert: "Exam submitted and graded successfully!",
-                gradedTitle: "Your exam has been graded automatically by AI",
-                finalScoreText: "Final Score: ",
-                fromText: " out of ",
-                detailedFeedbackTitle: "Detailed AI Feedback & Evaluation:",
-                pendingTitle: "Evaluating automatically...",
-                pendingStatus: "Your answers are being evaluated by AI",
-                pendingSub: "Please wait a moment for your results.",
-                uploadImgLabel: "Upload handwriting image or PDF file for answer:",
-                essayPlaceholder: "Type your text answer here..."
-            }
-        };
-        function toggleLanguage() {
-            currentLang = currentLang === 'ar' ? 'en' : 'ar';
-            localStorage.setItem('siteLang', currentLang);
-            applyLanguage();
-            renderExamPage();
-        }
-        function applyLanguage() {
-            let t = translations[currentLang];
-            let root = document.getElementById('html-root');
-            root.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
-            root.setAttribute('lang', currentLang);
-            document.getElementById('page-title').innerText = t.title;
-            document.getElementById('exam-heading').innerText = t.heading;
-            document.getElementById('timer-label').innerText = t.timerLabel;
-            document.getElementById('lang-btn').innerText = currentLang === 'ar' ? 'English' : 'عربي';
-            const studentID = localStorage.getItem('currentStudentID');
-            const studentName = localStorage.getItem('currentStudentName');
-            if(studentID) {
-                document.getElementById('student-info').innerText = t.welcome + studentName + " (ID: " + studentID + ")";
-            }
-        }
-        const studentID = localStorage.getItem('currentStudentID');
-        const studentName = localStorage.getItem('currentStudentName');
-        if (!studentID) {
-            alert(currentLang === 'ar' ? "يرجى تسجيل الدخول أولاً!" : "Please log in first!");
-            window.location.href = "index.html";
-        }
-        applyLanguage();
-        async function loadExamDataFromFirebase() {
-            try {
-                let settingsSnap = await getDoc(doc(db, "settings", "exam"));
-                if (settingsSnap.exists()) {
-                    examSettings = settingsSnap.data();
-                }
-                let questionsSnap = await getDoc(doc(db, "examData", "questionsBank"));
-                if (questionsSnap.exists() && questionsSnap.data().list) {
-                    questions = questionsSnap.data().list;
-                }
-                let submissionsSnap = await getDoc(doc(db, "examData", "submissions"));
-                if (submissionsSnap.exists() && submissionsSnap.data().list) {
-                    submissions = submissionsSnap.data().list;
-                }
-            } catch (error) {
-                console.error("Error loading exam data:", error);
-            }
-            renderExamPage();
-            initTimer();
-        }
-        loadExamDataFromFirebase();
-        function renderExamPage() {
-            let t = translations[currentLang];
-            const container = document.getElementById('exam-container');
-            container.innerHTML = "";
-            if (submissions[studentID]) {
-                let sub = submissions[studentID];
-                let box = document.createElement('div');
-                box.className = "text-center py-6 space-y-4";
-                if (sub.status === 'معتمد' || sub.graded) {
-                    let totalPoints = questions.reduce((a, b) => a + (b.points || 5), 0);
-                    let icon = document.createElement('div');
-                    icon.className = "text-green-400 text-4xl";
-                    icon.innerText = "✓";
-                    box.appendChild(icon);
-                    let title = document.createElement('h2');
-                    title.className = "text-xl font-bold";
-                    title.innerText = t.gradedTitle;
-                    box.appendChild(title);
-                    let scoreCard = document.createElement('div');
-                    scoreCard.className = "bg-black/30 p-3 rounded-xl inline-block border border-white/10";
-                    scoreCard.innerHTML = '<p class="text-md">' + t.finalScoreText + '<span class="font-bold text-yellow-400 text-xl">' + sub.finalScore + '</span>' + t.fromText + totalPoints + '</p>';
-                    box.appendChild(scoreCard);
-                    let feedbackBox = document.createElement('div');
-                    feedbackBox.className = "text-right space-y-3 mt-4 bg-black/20 p-4 rounded-xl border border-white/10 text-xs";
-                    let fbTitle = document.createElement('h3');
-                    fbTitle.className = "font-bold text-purple-300 text-sm mb-2";
-                    fbTitle.innerText = t.detailedFeedbackTitle;
-                    feedbackBox.appendChild(fbTitle);
-                    questions.forEach((q, idx) => {
-                        let ansObj = sub.answers[idx] || {};
-                        let qDiv = document.createElement('div');
-                        qDiv.className = "bg-black/30 p-3 rounded-lg space-y-1 border border-white/10";
-                        qDiv.innerHTML = '<p class="font-bold text-purple-200">سؤال ' + (idx + 1) + ': ' + q.text + '</p>' +
-                                         '<p class="text-gray-300">إجابتك: <span class="text-yellow-300">' + (ansObj.answer || 'مرفق صورة') + '</span></p>' +
-                                         '<div class="bg-purple-950/50 p-2 rounded mt-1 border border-purple-500/30">' +
-                                         '<p class="font-bold text-green-300">درجة السؤال: ' + (ansObj.aiAwardedPoints || 0) + ' / ' + q.points + '</p>' +
-                                         '<p class="text-gray-200 mt-1"><b>تقرير الـ AI:</b> ' + (ansObj.aiEvaluation || 'قيد المعالجة') + '</p>' +
-                                         '</div>';
-                        feedbackBox.appendChild(qDiv);
-                    });
-                    box.appendChild(feedbackBox);
-                } else {
-                    let spinner = document.createElement('div');
-                    spinner.className = "animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto";
-                    box.appendChild(spinner);
-                    let title = document.createElement('h2');
-                    title.className = "text-xl font-bold text-yellow-300";
-                    title.innerText = t.pendingTitle;
-                    box.appendChild(title);
-                    let statusText = document.createElement('p');
-                    statusText.className = "text-gray-300 text-sm";
-                    statusText.innerHTML = 'الحالة: <span class="text-yellow-400 font-bold">' + t.pendingStatus + '</span>';
-                    box.appendChild(statusText);
-                    let subText = document.createElement('p');
-                    subText.className = "text-xs text-gray-400";
-                    subText.innerText = t.pendingSub;
-                    box.appendChild(subText);
-                }
-                container.appendChild(box);
-                let timerBox = document.getElementById('timer-box');
-                if(timerBox) timerBox.style.display = 'none';
-                return;
-            }
-            if (examSettings.status !== 'متاح للطلاب' && examSettings.status !== 'Open') {
-                let msg = document.createElement('div');
-                msg.className = "text-center py-10 text-red-300 font-bold";
-                msg.innerText = t.notAvailable;
-                container.appendChild(msg);
-                let timerBox = document.getElementById('timer-box');
-                if(timerBox) timerBox.style.display = 'none';
-                return;
-            }
-            if (questions.length === 0) {
-                let msg = document.createElement('div');
-                msg.className = "text-center py-10 text-gray-300";
-                msg.innerText = t.noQuestions;
-                container.appendChild(msg);
-                return;
-            }
-            let form = document.createElement('form');
-            form.id = "submit-form";
-            form.className = "space-y-6";
-            form.onsubmit = submitExam;
-            questions.forEach((q, index) => {
-                let qCard = document.createElement('div');
-                qCard.className = "bg-black/20 p-4 rounded-xl border border-white/10 space-y-3";
-                let qTitle = document.createElement('label');
-                qTitle.className = "block font-bold text-purple-200";
-                qTitle.innerText = (index + 1) + ". " + q.text + " (" + q.points + " pts)";
-                qCard.appendChild(qTitle);
-                if (q.questionFileBase64) {
-                    let qImg = document.createElement('img');
-                    qImg.src = q.questionFileBase64;
-                    qImg.className = "max-h-48 mt-2 rounded border border-white/20";
-                    qCard.appendChild(qImg);
-                }
-                if (q.type === 'mcq' && q.rawOptions && q.rawOptions.length > 0) {
-                    q.rawOptions.forEach((optText, optIdx) => {
-                        let arabicLetters = ['أ', 'ب', 'ج', 'د', 'هـ'];
-                        let letter = arabicLetters[optIdx] || (optIdx + 1);
-                        let fullOptionValue = letter + ") " + optText;
-                        let optLabel = document.createElement('label');
-                        optLabel.className = "flex items-center space-x-3 space-x-reverse bg-black/30 p-2 rounded-lg cursor-pointer hover:bg-black/50";
-                        let radio = document.createElement('input');
-                        radio.type = "radio";
-                        radio.name = "q_" + index;
-                        radio.value = fullOptionValue;
-                        radio.required = true;
-                        radio.className = "text-purple-600";
-                        let span = document.createElement('span');
-                        span.innerText = fullOptionValue;
-                        optLabel.appendChild(radio);
-                        optLabel.appendChild(span);
-                        qCard.appendChild(optLabel);
-                    });
-                } else {
-                    let textarea = document.createElement('textarea');
-                    textarea.name = "q_" + index;
-                    textarea.rows = 3;
-                    textarea.className = "w-full bg-black/40 border border-white/20 rounded-lg p-3 text-white focus:outline-none focus:border-purple-500";
-                    textarea.placeholder = t.essayPlaceholder;
-                    qCard.appendChild(textarea);
-                }
-                let fileBox = document.createElement('div');
-                fileBox.className = "pt-2";
-                let fileLabel = document.createElement('label');
-                fileLabel.className = "text-xs text-gray-300 block mb-1";
-                fileLabel.innerText = t.uploadImgLabel;
-                fileBox.appendChild(fileLabel);
-                let fileInput = document.createElement('input');
-                fileInput.type = "file";
-                fileInput.id = "file_" + index;
-                fileInput.accept = "image/png,image/jpeg,image/webp,.pdf";
-                fileInput.className = "text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer";
-                fileBox.appendChild(fileInput);
-                qCard.appendChild(fileBox);
-                form.appendChild(qCard);
-            });
-            let submitBtn = document.createElement('button');
-            submitBtn.type = "submit";
-            submitBtn.className = "w-full bg-green-600 hover:bg-green-500 transition py-3 rounded-lg font-bold shadow-lg text-white";
-            submitBtn.innerText = t.submitBtn;
-            form.appendChild(submitBtn);
-            container.appendChild(form);
-        }
-        function submitExam(e) {
-            e.preventDefault();
-            window.triggerAutomaticSubmission();
-        }
-        window.triggerAutomaticSubmission = async function() {
-    let studentAnswers = {};
-    let totalQ = questions.length;
-    let openaiApiKey = localStorage.getItem('openaiApiKey') || '';
 
-    for(let index=0; index<questions.length; index++){
-        let q=questions[index];
-        let ans="";
 
-        if(q.type==='mcq'){
-            let selected=document.querySelector('input[name="q_'+index+'"]:checked');
-            ans=selected?selected.value:"";
-        }else{
-            let textareaElem=document.querySelector('textarea[name="q_'+index+'"]');
-            ans=textareaElem?textareaElem.value:"";
-        }
+async function callAI(content, apiKey) {
 
-        let fileInput=document.getElementById('file_'+index);
+    const response =
+        await fetch(
+            "https://api.openai.com/v1/responses",
+            {
 
-        if(fileInput&&fileInput.files&&fileInput.files[0]){
-            let file=fileInput.files[0];
-            let ok=["image/png","image/jpeg","image/webp","application/pdf"].includes(file.type);
+                method: "POST",
 
-            if(!ok){
-                alert(currentLang==="ar"?"صيغة الملف غير مدعومة. استخدم JPG أو PNG أو WEBP أو PDF.":"Unsupported file type. Use JPG, PNG, WEBP or PDF.");
-                return;
+                headers: {
+
+                    "Content-Type":
+                        "application/json",
+
+                    "Authorization":
+                        "Bearer " + apiKey
+                },
+
+                body: JSON.stringify({
+
+                    model: "gpt-4o",
+
+                    input: [
+                        {
+                            role: "user",
+                            content
+                        }
+                    ],
+
+                    text: {
+
+                        format: {
+
+                            type: "json_schema",
+
+                            name: "exam_grading",
+
+                            strict: true,
+
+                            schema: {
+
+                                type: "object",
+
+                                properties: {
+
+                                    studentTranscription: {
+                                        type: "string"
+                                    },
+
+                                    awardedPoints: {
+                                        type: "number"
+                                    },
+
+                                    feedback: {
+                                        type: "string"
+                                    }
+                                },
+
+                                required: [
+                                    "studentTranscription",
+                                    "awardedPoints",
+                                    "feedback"
+                                ],
+
+                                additionalProperties: false
+                            }
+                        }
+                    },
+
+                    max_output_tokens: 1200,
+
+                    store: false
+                })
             }
+        );
 
-            try{
-                let imageData=await new Promise((resolve,reject)=>{
-                    let reader=new FileReader();
-                    reader.onload=e=>resolve(e.target.result);
-                    reader.onerror=()=>reject(new Error("Could not read uploaded file"));
-                    reader.readAsDataURL(file);
-                });
 
-                studentAnswers[index]={
-                    answer:ans,
-                    image:imageData
-                };
-            }catch(err){
-                alert(currentLang==="ar"?"تعذر قراءة الملف المرفوع.":"Could not read uploaded file.");
-                return;
-            }
-        }else{
-            studentAnswers[index]={
-                answer:ans,
-                image:null
-            };
-        }
+    const data =
+        await response.json();
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            data?.error?.message ||
+            "OpenAI request failed."
+        );
     }
 
-    let container=document.getElementById('exam-container');
 
-    container.innerHTML=`
-        <div class="text-center py-10 space-y-4">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto"></div>
-            <h2 class="text-xl font-bold text-yellow-300">جاري تصحيح الامتحان بالذكاء الاصطناعي...</h2>
-            <p class="text-xs text-gray-400">يرجى الانتظار لحظات حتى تظهر نتيجتك النهائية.</p>
-        </div>
-    `;
+    if (data?.incomplete_details) {
 
-    await processGrading(studentAnswers,totalQ,openaiApiKey,totalQ);
-};
-        async function processGrading(answersObj, totalQ, openaiApiKey, count) {
-            if (count < totalQ) return;
-            let totalCalculatedScore = 0;
-            for (let qIdx = 0; qIdx < questions.length; qIdx++) {
-                let q = questions[qIdx];
-                let ansObj = answersObj[qIdx];
-                if (q.type === 'mcq') {
-                    let studentFirstChar = (ansObj?.answer || "").trim().charAt(0);
-                    let modelFirstChar = (q.modelAnswer || "").trim().charAt(0);
-                    if (studentFirstChar === modelFirstChar && modelFirstChar !== "") {
-                        totalCalculatedScore += (q.points || 5);
-                        ansObj.aiAwardedPoints = q.points || 5;
-                        ansObj.aiEvaluation = currentLang === 'ar' ? "تم تصحيح السؤال الاختياري بنجاح ومطابقته للإجابة النموذجية." : "MCQ graded successfully and matched model answer.";
-                    } else {
-                        ansObj.aiAwardedPoints = 0;
-                        ansObj.aiEvaluation = currentLang === 'ar' ? "إجابة خاطئة لم تتطابق مع الاختيار النموذجي." : "Incorrect answer, did not match model choice.";
+        throw new Error(
+            "OpenAI response was incomplete."
+        );
+    }
+
+
+    const text =
+        getAIText(data).trim();
+
+
+    if (!text) {
+
+        throw new Error(
+            "OpenAI returned no grading result."
+        );
+    }
+
+
+    return text
+        .replace(/```json/gi, "")
+        .replace(/```/g, "")
+        .trim();
+}
+
+
+/* =========================================================
+   LOAD FIREBASE DATA
+========================================================= */
+
+async function loadExamData() {
+
+    try {
+
+        const settingsSnap =
+            await getDoc(
+                doc(db, "examData", "settings")
+            );
+
+
+        if (settingsSnap.exists()) {
+
+            examSettings =
+                settingsSnap.data().exam ||
+                examSettings;
+        }
+
+
+        const questionsSnap =
+            await getDoc(
+                doc(db, "examData", "questionsBank")
+            );
+
+
+        if (questionsSnap.exists()) {
+
+            questions =
+                questionsSnap.data().list || [];
+        }
+
+
+        const submissionsSnap =
+            await getDoc(
+                doc(db, "examData", "submissions")
+            );
+
+
+        if (submissionsSnap.exists()) {
+
+            submissions =
+                submissionsSnap.data().list || {};
+        }
+
+
+        document.getElementById(
+            "student-info"
+        ).innerText =
+            `Student: ${studentName} • ID: ${studentID}`;
+
+
+        checkStudentSubmission();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            "Unable to load the exam. Please refresh the page."
+        );
+    }
+}
+
+
+/* =========================================================
+   CHECK EXISTING SUBMISSION
+========================================================= */
+
+function checkStudentSubmission() {
+
+    const sub =
+        submissions[studentID];
+
+
+    if (!sub) {
+
+        renderExam();
+
+        return;
+    }
+
+
+    if (
+        sub.status === "grading" ||
+        sub.status === "processing"
+    ) {
+
+        showGradingScreen();
+
+        startSubmissionStatusWatcher();
+
+        return;
+    }
+
+
+    if (
+        sub.status === "graded" ||
+        sub.status === "approved" ||
+        sub.graded === true
+    ) {
+
+        showFinalResult(sub);
+
+        return;
+    }
+
+
+    renderExam();
+}
+
+
+/* =========================================================
+   RENDER EXAM
+========================================================= */
+
+function renderExam() {
+
+    const container =
+        document.getElementById(
+            "exam-container"
+        );
+
+
+    if (
+        examSettings.status !== "Open" &&
+        examSettings.status !== "متاح للطلاب"
+    ) {
+
+        showMessage(
+            "The exam is currently closed."
+        );
+
+        return;
+    }
+
+
+    if (!questions.length) {
+
+        showMessage(
+            "There are no questions available."
+        );
+
+        return;
+    }
+
+
+    container.innerHTML = "";
+
+
+    const form =
+        document.createElement("form");
+
+    form.id = "submit-form";
+
+    form.className =
+        "space-y-6";
+
+
+    form.addEventListener(
+        "submit",
+        submitExam
+    );
+
+
+    questions.forEach(
+        (q, index) => {
+
+            const card =
+                document.createElement("div");
+
+            card.className =
+                "bg-black/25 border border-white/10 p-5 rounded-2xl space-y-4";
+
+
+            const title =
+                document.createElement("div");
+
+            title.className =
+                "font-bold text-purple-200 text-lg";
+
+            title.innerText =
+                `${index + 1}. ${q.text} (${q.points} pts)`;
+
+
+            card.appendChild(title);
+
+
+            /* QUESTION FILE */
+
+            if (q.questionFileBase64) {
+
+                if (
+                    q.questionFileBase64
+                    .startsWith("data:image/")
+                ) {
+
+                    const image =
+                        document.createElement("img");
+
+                    image.src =
+                        q.questionFileBase64;
+
+                    image.className =
+                        "max-h-64 mx-auto rounded-xl border border-white/20";
+
+                    card.appendChild(image);
+
+                } else if (
+                    q.questionFileBase64
+                    .startsWith("data:application/pdf")
+                ) {
+
+                    const iframe =
+                        document.createElement("iframe");
+
+                    iframe.src =
+                        q.questionFileBase64;
+
+                    iframe.className =
+                        "w-full h-96 rounded-xl border border-white/20";
+
+                    card.appendChild(iframe);
+                }
+            }
+
+
+            /* MCQ */
+
+            if (
+                q.type === "mcq" &&
+                q.rawOptions &&
+                q.rawOptions.length
+            ) {
+
+                const letters =
+                    ["A", "B", "C", "D", "E"];
+
+
+                q.rawOptions.forEach(
+                    (option, optionIndex) => {
+
+                        const label =
+                            document.createElement("label");
+
+                        label.className =
+                            "flex items-center gap-3 bg-black/30 border border-white/10 p-3 rounded-xl cursor-pointer hover:bg-purple-900/30 transition";
+
+
+                        const radio =
+                            document.createElement("input");
+
+                        radio.type =
+                            "radio";
+
+                        radio.name =
+                            `q_${index}`;
+
+                        radio.value =
+                            `${letters[optionIndex]}) ${option}`;
+
+                        radio.required =
+                            true;
+
+                        radio.className =
+                            "w-4 h-4";
+
+
+                        const text =
+                            document.createElement("span");
+
+                        text.innerText =
+                            `${letters[optionIndex]}) ${option}`;
+
+
+                        label.appendChild(radio);
+
+                        label.appendChild(text);
+
+                        card.appendChild(label);
                     }
-                } else if (q.type === 'essay') {
-                    let studentAnswer = (ansObj?.answer || "").trim().toLowerCase();
-                    let dontKnowAnswers = [
-                        "معرفش",
-                        "مش عارف",
-                        "مش عارفة",
-                        "لا أعرف",
-                        "لا اعرف",
-                        "لا أعلم",
-                        "لا اعلم",
-                        "مش عارف الإجابة",
-                        "مش عارف الاجابة",
-                        "i don't know",
-                        "i dont know",
-                        "don't know",
-                        "dont know",
-                        "idk",
-                        "no idea",
-                        "unknown"
-                    ];
-                    if (!ansObj?.image && dontKnowAnswers.includes(studentAnswer)) {
-                        ansObj.aiAwardedPoints = 0;
-                        ansObj.aiEvaluation = "The student stated that they do not know the answer. No answer was provided for grading.";
-                        continue;
-                    }
-                    if (!openaiApiKey) {
-                        ansObj.aiAwardedPoints = 0;
-                        ansObj.aiEvaluation = currentLang === 'ar' ? "لم يتم إدخال مفتاح الـ AI، بانتظار المراجعة." : "API key missing.";
-                        continue;
-                    }
-                    let langInstruction = (currentLang === 'ar') 
-                        ? 'قم بتقييم إجابة الطالب المرفقة (سواء كانت في الصورة أو النص) بمقارنتها بدقة مع هينت أو إجابة الأستاذ النموذجية. امنح الدرجة باستحقاق كامل بناءً على صحة الحل.' 
-                        : 'Evaluate the student answer (provided in image or text) by comparing it accurately with the instructor hint. Award points based on correctness.';
-                    let promptText = `You are an expert exam grader with strong OCR and handwriting-reading ability.
+                );
 
-The student's uploaded answer image is the PRIMARY SOURCE for grading.
+            } else {
 
-If a student answer image is attached to this request, you MUST inspect the actual image content and read the student's handwriting before assigning any score.
+                /* ESSAY */
 
-The image is NOT decorative and must NOT be ignored.
+                const textarea =
+                    document.createElement("textarea");
 
-Do not say that no answer was provided if a student answer image is attached.
+                textarea.name =
+                    `q_${index}`;
 
-The student may use handwritten Arabic or English, numbers, mathematical equations, calculations, or diagrams.
-Carefully read the handwriting from the image before grading.
-Do NOT say the image is unreadable unless the writing is genuinely impossible to read.
-Do NOT rely only on the typed Student Text Answer field.
+                textarea.rows =
+                    5;
 
-First, carefully read and transcribe what you can understand from the student's image.
-Then compare the student's actual answer and reasoning with the instructor's answer or hint.
+                textarea.className =
+                    "w-full bg-black/40 border border-white/20 rounded-xl p-4 text-white resize-none";
+
+                textarea.placeholder =
+                    "Write your answer here...";
+
+
+                card.appendChild(textarea);
+            }
+
+
+            /* FILE UPLOAD */
+
+            const uploadBox =
+                document.createElement("div");
+
+            uploadBox.className =
+                "border-t border-white/10 pt-4";
+
+
+            const uploadLabel =
+                document.createElement("p");
+
+            uploadLabel.className =
+                "text-xs text-gray-400 mb-2";
+
+            uploadLabel.innerText =
+                "Optional: Upload a handwritten answer image or PDF";
+
+
+            const fileInput =
+                document.createElement("input");
+
+            fileInput.type =
+                "file";
+
+            fileInput.id =
+                `file_${index}`;
+
+            fileInput.accept =
+                "image/png,image/jpeg,image/webp,.pdf";
+
+            fileInput.className =
+                "text-xs text-gray-400 file:bg-purple-600 file:text-white file:border-0 file:px-4 file:py-2 file:rounded-lg";
+
+
+            uploadBox.appendChild(
+                uploadLabel
+            );
+
+            uploadBox.appendChild(
+                fileInput
+            );
+
+            card.appendChild(
+                uploadBox
+            );
+
+
+            form.appendChild(card);
+        }
+    );
+
+
+    /* SUBMIT BUTTON */
+
+    const submitButton =
+        document.createElement("button");
+
+    submitButton.type =
+        "submit";
+
+    submitButton.id =
+        "submit-button";
+
+    submitButton.className =
+        "w-full bg-green-600 hover:bg-green-500 py-4 rounded-2xl font-black text-lg transition shadow-lg";
+
+    submitButton.innerText =
+        "Submit Exam";
+
+
+    form.appendChild(
+        submitButton
+    );
+
+
+    container.appendChild(form);
+
+
+    startTimer();
+}
+
+
+/* =========================================================
+   SUBMIT EXAM
+========================================================= */
+
+async function submitExam(event) {
+
+    event.preventDefault();
+
+    await finalizeExam("manual");
+}
+
+
+/* =========================================================
+   FINALIZE EXAM
+========================================================= */
+
+async function finalizeExam(reason) {
+
+    if (examSubmissionStarted) {
+
+        return;
+    }
+
+
+    examSubmissionStarted = true;
+
+
+    /* STOP TIMER IMMEDIATELY */
+
+    stopTimer();
+
+
+    const submitButton =
+        document.getElementById(
+            "submit-button"
+        );
+
+    if (submitButton) {
+
+        submitButton.disabled =
+            true;
+
+        submitButton.innerText =
+            "Submitting...";
+    }
+
+
+    let studentAnswers = {};
+
+
+    for (
+        let index = 0;
+        index < questions.length;
+        index++
+    ) {
+
+        const q =
+            questions[index];
+
+
+        let answer = "";
+
+
+        if (q.type === "mcq") {
+
+            const selected =
+                document.querySelector(
+                    `input[name="q_${index}"]:checked`
+                );
+
+            answer =
+                selected
+                    ? selected.value
+                    : "";
+
+        } else {
+
+            const textarea =
+                document.querySelector(
+                    `textarea[name="q_${index}"]`
+                );
+
+            answer =
+                textarea
+                    ? textarea.value
+                    : "";
+        }
+
+
+        let image =
+            null;
+
+
+        const fileInput =
+            document.getElementById(
+                `file_${index}`
+            );
+
+
+        if (
+            fileInput &&
+            fileInput.files &&
+            fileInput.files[0]
+        ) {
+
+            const file =
+                fileInput.files[0];
+
+
+            const allowedTypes = [
+
+                "image/png",
+                "image/jpeg",
+                "image/webp",
+                "application/pdf"
+
+            ];
+
+
+            if (
+                !allowedTypes.includes(
+                    file.type
+                )
+            ) {
+
+                alert(
+                    "Unsupported file type. Please use JPG, PNG, WEBP or PDF."
+                );
+
+                examSubmissionStarted =
+                    false;
+
+                startTimer();
+
+                return;
+            }
+
+
+            image =
+                await readFileAsDataURL(
+                    file
+                );
+        }
+
+
+        studentAnswers[index] = {
+
+            answer,
+
+            image,
+
+            aiAwardedPoints: 0,
+
+            aiEvaluation: "",
+
+            aiTranscription: ""
+        };
+    }
+
+
+    /*
+       IMPORTANT:
+       SAVE THE SUBMISSION BEFORE AI GRADING.
+       THIS PREVENTS REFRESH FROM REOPENING THE EXAM.
+    */
+
+    submissions[studentID] = {
+
+        studentId:
+            studentID,
+
+        studentName:
+            studentName,
+
+        answers:
+            studentAnswers,
+
+        autoScore:
+            0,
+
+        finalScore:
+            0,
+
+        status:
+            "grading",
+
+        graded:
+            false,
+
+        submissionReason:
+            reason,
+
+        submittedAt:
+            new Date().toISOString(),
+
+        teacherNotes:
+            "AI grading in progress."
+    };
+
+
+    try {
+
+        await setDoc(
+            doc(
+                db,
+                "examData",
+                "submissions"
+            ),
+            {
+                list:
+                    submissions
+            }
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        examSubmissionStarted =
+            false;
+
+        alert(
+            "Your submission could not be saved. Please try again."
+        );
+
+        startTimer();
+
+        return;
+    }
+
+
+    /* SHOW GRADING SCREEN */
+
+    showGradingScreen();
+
+
+    /*
+       START AI GRADING
+    */
+
+    const apiKey =
+        localStorage.getItem(
+            "openaiApiKey"
+        ) || "";
+
+
+    await processGrading(
+        studentAnswers,
+        apiKey
+    );
+}
+
+
+/* =========================================================
+   AI GRADING
+========================================================= */
+
+async function processGrading(
+    answersObj,
+    openaiApiKey
+) {
+
+    let totalScore = 0;
+
+
+    for (
+        let qIdx = 0;
+        qIdx < questions.length;
+        qIdx++
+    ) {
+
+        const q =
+            questions[qIdx];
+
+        const ansObj =
+            answersObj[qIdx];
+
+
+        if (q.type === "mcq") {
+
+            const studentAnswer =
+                (ansObj?.answer || "")
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase();
+
+
+            const modelAnswer =
+                (q.modelAnswer || "")
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase();
+
+
+            if (
+                studentAnswer &&
+                modelAnswer &&
+                studentAnswer === modelAnswer
+            ) {
+
+                ansObj.aiAwardedPoints =
+                    q.points || 0;
+
+                ansObj.aiEvaluation =
+                    "Correct answer.";
+
+                totalScore +=
+                    q.points || 0;
+
+            } else {
+
+                ansObj.aiAwardedPoints =
+                    0;
+
+                ansObj.aiEvaluation =
+                    "Incorrect answer.";
+            }
+
+
+            continue;
+        }
+
+
+        /* ESSAY */
+
+        const typedAnswer =
+            (ansObj?.answer || "")
+                .trim();
+
+
+        if (
+            !ansObj?.image &&
+            !typedAnswer
+        ) {
+
+            ansObj.aiAwardedPoints =
+                0;
+
+            ansObj.aiEvaluation =
+                "No answer was provided.";
+
+            continue;
+        }
+
+
+        if (!openaiApiKey) {
+
+            ansObj.aiAwardedPoints =
+                0;
+
+            ansObj.aiEvaluation =
+                "AI grading could not be completed because the OpenAI API key is missing.";
+
+            continue;
+        }
+
+
+        const prompt = `You are an expert English examination grader.
+
+This is an English exam for an IGCSE-level student.
+
+Read the student's answer carefully.
+
+If a student answer image or PDF is attached, it is the PRIMARY SOURCE for grading.
+
+You MUST inspect the actual uploaded answer.
+
+Read handwriting carefully.
+
+Compare the student's answer with the instructor's model answer or hint.
 
 Question:
 ${q.text}
 
-Instructor Hint / Model Answer:
-${q.essayHintText || 'Use the attached instructor hint image/file.'}
+Instructor Model Answer / Hint:
+${q.essayHintText || "Use the attached instructor answer file if available."}
 
-Student Text Answer:
-${ansObj?.answer || 'No typed answer. The actual answer may be in the attached image.'}
+Student Typed Answer:
+${typedAnswer || "No typed answer. The student's answer may be in the uploaded image."}
 
 Maximum Points:
-${q.points || 5}
+${q.points || 0}
 
 GRADING RULES:
 
-1. Carefully understand the instructor's model answer or hint before grading.
-2. Carefully inspect the student's actual answer, including the uploaded image when available.
-3. Compare the student's answer directly with the instructor's answer or hint.
-4. Check the important concepts, steps, reasoning, calculations, and conclusions required by the instructor.
-5. Give credit for correct reasoning even when the wording is different.
-6. Do not require the exact same words as the instructor.
-7. Give partial credit when the answer is partially correct.
-8. Deduct points for incorrect, missing, or unsupported parts.
-9. Do NOT give points simply because the student wrote something.
-10. Do NOT give the full score unless the student's answer actually satisfies the instructor's requirements.
-11. Do not assume information that the student did not provide.
-12. If the student says they do not know the answer or provides no meaningful answer, award 0 points.
-13. If the answer is handwritten, read the handwriting carefully from the image before grading.
-14. For mathematical or scientific answers, inspect the student's calculations and final result carefully.
-15. Explain what was correct, what was wrong or missing, and why the awarded score was given.
-16. The final awardedPoints must be between 0 and the maximum points.
+1. Grade based on correctness and understanding.
+2. Do not require exact wording.
+3. Give partial credit when appropriate.
+4. Check important concepts, reasoning, grammar-related requirements, calculations and conclusions when relevant.
+5. Do not give points simply because the student wrote something.
+6. Do not give full marks unless the answer satisfies the requirements.
+7. If the answer is missing or meaningless, give 0.
+8. Explain what was correct.
+9. Explain what was incorrect or missing.
+10. The awardedPoints must be between 0 and the maximum points.
 
-Return ONLY valid JSON with exactly these fields:
+Return ONLY valid JSON:
+
 {
-  "studentTranscription": "What you can accurately read from the student's answer image, or an empty string if there is no image.",
-  "awardedPoints": number,
-  "feedback": "Explain what was correct, what was wrong or missing, and why this score was awarded."
+  "studentTranscription": "",
+  "awardedPoints": 0,
+  "feedback": ""
 }`;
-                    let contentMessages=[
-    {
-        type:"input_text",
-        text:promptText
-    }
-];
 
-addAIFile(contentMessages,q.questionFileBase64,"question");
-addAIFile(contentMessages,q.hintFileBase64,"instructor-hint");
 
-if(ansObj?.image){
-    contentMessages.push({
-        type:"input_text",
-        text:"IMPORTANT: The next attached image is the STUDENT'S ACTUAL ANSWER. You MUST inspect and read this image before grading."
-    });
+        const content = [
 
-    if(ansObj.image.startsWith("data:image/")){
-        contentMessages.push({
-            type:"input_image",
-            image_url:ansObj.image,
-            detail:"high"
-        });
-    }else if(ansObj.image.startsWith("data:application/pdf")){
-        contentMessages.push({
-            type:"input_file",
-            file_data:ansObj.image,
-            filename:"student-answer.pdf"
-        });
-    }
-}else{
-    contentMessages.push({
-        type:"input_text",
-        text:"IMPORTANT: No student answer image was uploaded."
-    });
-}
-                    try{
-                        let resultStr=await callAI(contentMessages,openaiApiKey);
-                        let aiResult=JSON.parse(resultStr);
-                        let awarded=Number(aiResult.awardedPoints);
-                        if(!Number.isFinite(awarded))awarded=0;
-                        awarded=Math.max(0,Math.min(q.points||5,awarded));
-                        ansObj.aiAwardedPoints=awarded;
-                        ansObj.aiTranscription=aiResult.studentTranscription||"";
-                        ansObj.aiEvaluation=aiResult.feedback||(currentLang==='ar'?"تم التصحيح بناءً على مطابقة هينت الأستاذ.":"Graded based on instructor hint match.");
-                        totalCalculatedScore+=awarded;
-                    }catch(err){
-                        console.error("OpenAI Error:",err);
-                        ansObj.aiAwardedPoints=0;
-                        ansObj.aiEvaluation=(currentLang==='ar'?"خطأ في قراءة/تصحيح الملف: ":"AI file/grading error: ")+err.message;
-                    }
-                }
+            {
+                type:
+                    "input_text",
+
+                text:
+                    prompt
             }
-            submissions[studentID] = {
-                studentId: studentID,
-                studentName: studentName,
-                answers: answersObj,
-                autoScore: totalCalculatedScore,
-                finalScore: totalCalculatedScore,
-                status: 'معتمد',
-                graded: true,
-                teacherNotes: currentLang === 'ar' ? "تم التصحيح ورصد الدرجة تلقائياً بواسطة الـ AI." : "Graded and scored automatically by AI"
-            };
-            try {
-                await setDoc(doc(db, "examData", "submissions"), { list: submissions });
-                alert(translations[currentLang].successAlert);
-                renderExamPage();
-            } catch(error) {
-                console.error("Error saving automatic submission:", error);
+
+        ];
+
+
+        addAIFile(
+            content,
+            q.questionFileBase64,
+            "question"
+        );
+
+
+        addAIFile(
+            content,
+            q.hintFileBase64,
+            "instructor-hint"
+        );
+
+
+        if (ansObj?.image) {
+
+            content.push({
+
+                type:
+                    "input_text",
+
+                text:
+                    "IMPORTANT: The following attachment is the student's actual answer. Inspect it carefully before grading."
+            });
+
+
+            if (
+                ansObj.image
+                    .startsWith(
+                        "data:image/"
+                    )
+            ) {
+
+                content.push({
+
+                    type:
+                        "input_image",
+
+                    image_url:
+                        ansObj.image,
+
+                    detail:
+                        "high"
+                });
+
+            } else {
+
+                content.push({
+
+                    type:
+                        "input_file",
+
+                    file_data:
+                        ansObj.image,
+
+                    filename:
+                        "student-answer.pdf"
+                });
             }
         }
-        function initTimer() {
-            let durationMinutes = parseInt(examSettings.duration) || 10;
-            let totalSeconds = durationMinutes * 60;
-            localStorage.removeItem('examRemainingSeconds');
-            localStorage.removeItem('lastExamDuration');
-            let timerInterval = setInterval(() => {
-                if (totalSeconds <= 0) {
-                    clearInterval(timerInterval);
-                    alert("انتهى وقت الامتحان! سيتم قفل الامتحان وتسليم إجاباتك أوتوماتيكياً الآن.");
-                    window.triggerAutomaticSubmission();
-                    let form = document.getElementById('submit-form');
-                    if(form) form.innerHTML = '<div class="text-center py-10 text-red-400 font-bold text-lg">انتهى وقت الامتحان وتم قفل الصفحة بنجاح!</div>';
+
+
+        try {
+
+            const result =
+                await callAI(
+                    content,
+                    openaiApiKey
+                );
+
+
+            const aiResult =
+                JSON.parse(result);
+
+
+            let awarded =
+                Number(
+                    aiResult.awardedPoints
+                );
+
+
+            if (
+                !Number.isFinite(
+                    awarded
+                )
+            ) {
+
+                awarded = 0;
+            }
+
+
+            awarded =
+                Math.max(
+                    0,
+                    Math.min(
+                        q.points || 0,
+                        awarded
+                    )
+                );
+
+
+            ansObj.aiAwardedPoints =
+                awarded;
+
+
+            ansObj.aiTranscription =
+                aiResult.studentTranscription ||
+                "";
+
+
+            ansObj.aiEvaluation =
+                aiResult.feedback ||
+                "AI grading completed.";
+
+
+            totalScore +=
+                awarded;
+
+
+        } catch (error) {
+
+            console.error(
+                "AI grading error:",
+                error
+            );
+
+
+            ansObj.aiAwardedPoints =
+                0;
+
+
+            ansObj.aiEvaluation =
+                "AI grading error: " +
+                error.message;
+        }
+    }
+
+
+    /* FINAL SAVE */
+
+    submissions[studentID] = {
+
+        ...submissions[studentID],
+
+        answers:
+            answersObj,
+
+        autoScore:
+            totalScore,
+
+        finalScore:
+            totalScore,
+
+        status:
+            "graded",
+
+        graded:
+            true,
+
+        gradedAt:
+            new Date().toISOString(),
+
+        teacherNotes:
+            "Exam graded automatically by AI."
+    };
+
+
+    try {
+
+        await setDoc(
+            doc(
+                db,
+                "examData",
+                "submissions"
+            ),
+            {
+                list:
+                    submissions
+            }
+        );
+
+
+        showFinalResult(
+            submissions[studentID]
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+            "Your exam was graded, but the final result could not be saved. Please contact the administrator."
+        );
+    }
+}
+
+
+/* =========================================================
+   SHOW GRADING SCREEN
+========================================================= */
+
+function showGradingScreen() {
+
+    stopTimer();
+
+
+    const container =
+        document.getElementById(
+            "exam-container"
+        );
+
+
+    container.innerHTML = `
+
+        <div class="text-center py-16">
+
+            <div
+                class="w-20 h-20 mx-auto mb-6 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin">
+            </div>
+
+            <h2 class="text-2xl font-black text-purple-300">
+                Your exam is being graded
+            </h2>
+
+            <p class="text-gray-300 mt-3">
+                AI is currently analyzing your answers.
+            </p>
+
+            <p class="text-gray-400 text-sm mt-2">
+                Please do not close the page.
+            </p>
+
+            <div
+                class="mt-6 bg-black/30 border border-white/10 rounded-xl p-4 text-sm text-gray-400">
+                Your exam has already been submitted successfully.
+                Refreshing this page will NOT reopen the exam.
+            </div>
+
+        </div>
+    `;
+
+
+    startSubmissionStatusWatcher();
+}
+
+
+/* =========================================================
+   WATCH GRADING STATUS
+========================================================= */
+
+function startSubmissionStatusWatcher() {
+
+    if (
+        window.gradingWatcher
+    ) {
+
+        clearInterval(
+            window.gradingWatcher
+        );
+    }
+
+
+    window.gradingWatcher =
+        setInterval(
+            async () => {
+
+                try {
+
+                    const snap =
+                        await getDoc(
+                            doc(
+                                db,
+                                "examData",
+                                "submissions"
+                            )
+                        );
+
+
+                    if (!snap.exists()) {
+                        return;
+                    }
+
+
+                    const all =
+                        snap.data().list || {};
+
+
+                    const sub =
+                        all[studentID];
+
+
+                    if (!sub) {
+                        return;
+                    }
+
+
+                    if (
+                        sub.status === "graded" ||
+                        sub.status === "approved" ||
+                        sub.graded === true
+                    ) {
+
+                        clearInterval(
+                            window.gradingWatcher
+                        );
+
+
+                        submissions =
+                            all;
+
+
+                        showFinalResult(
+                            sub
+                        );
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Status watcher error:",
+                        error
+                    );
+                }
+
+            },
+
+            1500
+        );
+}
+
+
+/* =========================================================
+   FINAL RESULT
+========================================================= */
+
+function showFinalResult(sub) {
+
+    stopTimer();
+
+
+    const container =
+        document.getElementById(
+            "exam-container"
+        );
+
+
+    const totalPoints =
+        questions.reduce(
+            (sum, q) =>
+                sum + Number(q.points || 0),
+            0
+        );
+
+
+    const score =
+        Number(
+            sub.finalScore || 0
+        );
+
+
+    let percentage =
+        totalPoints > 0
+            ? Math.round(
+                (score / totalPoints) * 100
+            )
+            : 0;
+
+
+    let html = `
+
+        <div class="text-center">
+
+            <div
+                class="w-20 h-20 mx-auto mb-4 rounded-full bg-purple-600/30 border border-purple-400 flex items-center justify-center text-2xl font-black">
+                ✓
+            </div>
+
+            <h2 class="text-3xl font-black text-purple-300">
+                Exam Submitted
+            </h2>
+
+            <p class="text-gray-300 mt-2">
+                Your AI grading has been completed.
+            </p>
+
+
+            <div
+                class="mt-8 bg-black/30 border border-white/10 rounded-2xl p-6">
+
+                <p class="text-gray-400 text-sm">
+                    Final Score
+                </p>
+
+                <p class="text-5xl font-black text-white mt-2">
+                    ${score}
+                    <span class="text-2xl text-gray-400">
+                        / ${totalPoints}
+                    </span>
+                </p>
+
+                <p class="text-purple-300 font-bold mt-2">
+                    ${percentage}%
+                </p>
+
+            </div>
+
+            <div class="mt-8 text-left space-y-4">
+
+                <h3 class="font-bold text-lg text-purple-200">
+                    AI Feedback
+                </h3>
+
+    `;
+
+
+    questions.forEach(
+        (q, index) => {
+
+            const answer =
+                sub.answers?.[index] || {};
+
+
+            html += `
+
+                <div
+                    class="bg-black/25 border border-white/10 rounded-xl p-4">
+
+                    <div class="flex justify-between gap-3">
+
+                        <span class="font-bold">
+                            Question ${index + 1}
+                        </span>
+
+                        <span class="text-purple-300 font-bold">
+                            ${Number(answer.aiAwardedPoints || 0)}
+                            / ${Number(q.points || 0)}
+                        </span>
+
+                    </div>
+
+                    <p class="text-gray-300 text-sm mt-3 leading-6">
+                        ${escapeHTML(
+                            answer.aiEvaluation ||
+                            "No feedback available."
+                        )}
+                    </p>
+
+                </div>
+
+            `;
+        }
+    );
+
+
+    html += `
+
+            </div>
+
+        </div>
+    `;
+
+
+    container.innerHTML =
+        html;
+}
+
+
+/* =========================================================
+   TIMER
+========================================================= */
+
+function startTimer() {
+
+    stopTimer();
+
+
+    let totalSeconds =
+        Number(
+            examSettings.duration || 10
+        ) * 60;
+
+
+    updateTimerDisplay(
+        totalSeconds
+    );
+
+
+    timerInterval =
+        setInterval(
+            async () => {
+
+                if (
+                    examSubmissionStarted
+                ) {
+
+                    stopTimer();
+
                     return;
                 }
+
+
                 totalSeconds--;
-                let m = Math.floor(totalSeconds / 60);
-                let s = totalSeconds % 60;
-                let timerElem = document.getElementById('time-left');
-                if (timerElem) {
-                    timerElem.innerText = m.toString().padStart(2, '0') + ":" + s.toString().padStart(2, '0');
+
+
+                updateTimerDisplay(
+                    totalSeconds
+                );
+
+
+                if (
+                    totalSeconds <= 0
+                ) {
+
+                    stopTimer();
+
+
+                    await finalizeExam(
+                        "time_expired"
+                    );
                 }
-            }, 1000);
+
+            },
+
+            1000
+        );
+}
+
+
+function stopTimer() {
+
+    if (timerInterval) {
+
+        clearInterval(
+            timerInterval
+        );
+
+        timerInterval =
+            null;
+    }
+
+
+    const timer =
+        document.getElementById(
+            "timer-box"
+        );
+
+
+    if (timer) {
+
+        timer.classList.add(
+            "opacity-50"
+        );
+    }
+}
+
+
+function updateTimerDisplay(
+    seconds
+) {
+
+    const timer =
+        document.getElementById(
+            "time-left"
+        );
+
+
+    if (!timer) return;
+
+
+    seconds =
+        Math.max(
+            0,
+            seconds
+        );
+
+
+    const minutes =
+        Math.floor(
+            seconds / 60
+        );
+
+
+    const remaining =
+        seconds % 60;
+
+
+    timer.innerText =
+        String(minutes).padStart(
+            2,
+            "0"
+        )
+        +
+        ":"
+        +
+        String(remaining).padStart(
+            2,
+            "0"
+        );
+}
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function readFileAsDataURL(file) {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            const reader =
+                new FileReader();
+
+
+            reader.onload =
+                () =>
+                    resolve(
+                        reader.result
+                    );
+
+
+            reader.onerror =
+                reject;
+
+
+            reader.readAsDataURL(
+                file
+            );
         }
-        window.toggleLanguage = toggleLanguage;
-    </script>
+    );
+}
+
+
+function escapeHTML(value) {
+
+    return String(value)
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+}
+
+
+function showMessage(message) {
+
+    document.getElementById(
+        "exam-container"
+    ).innerHTML = `
+
+        <div class="text-center py-16">
+
+            <div class="text-5xl mb-5">
+                📘
+            </div>
+
+            <h2 class="text-xl font-bold text-purple-300">
+                ${escapeHTML(message)}
+            </h2>
+
+        </div>
+    `;
+}
+
+
+/* =========================================================
+   START
+========================================================= */
+
+loadExamData();
+
+</script>
+
 </body>
 </html>
