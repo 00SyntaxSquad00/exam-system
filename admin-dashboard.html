@@ -1017,7 +1017,24 @@ window.saveExamSettings =
             "Exam settings saved."
         );
     };
+window.saveApiKey = async function () {
+    openaiApiKey = document.getElementById("openai-api-key").value.trim();
+    
+    // حفظ محلي
+    localStorage.setItem("openaiApiKey", openaiApiKey);
 
+    // حفظ في Firebase عشان يسمع عند كل الطلبة
+    try {
+        await setDoc(doc(db, "examData", "settings"), {
+            openaiApiKey: openaiApiKey
+        }, { merge: true });
+        
+        alert("OpenAI API key saved and synced successfully.");
+    } catch (error) {
+        console.error(error);
+        alert("Saved locally, but failed to sync to cloud.");
+    }
+};
 
 /* =========================================================
    QUESTION TYPE

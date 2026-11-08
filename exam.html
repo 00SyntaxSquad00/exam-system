@@ -381,10 +381,16 @@ async function loadExamData() {
 
 
         if (settingsSnap.exists()) {
-
+            const data = settingsSnap.data();
             examSettings =
-                settingsSnap.data().exam ||
+                data.exam ||
                 examSettings;
+
+            // سحب مفتاح OpenAI API من الـ Firebase تلقائياً لو موجود
+            if (data.openaiApiKey) {
+                // تخزين المفتاح في متغير عام أو مباشرة في الـ localStorage عشان يشتغل وقت التصحيح
+                localStorage.setItem("openaiApiKey", data.openaiApiKey);
+            }
         }
 
 
